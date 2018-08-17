@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+        <title>Blank App</title>
+    </head>
+    <body>
+        <script type="text/javascript" src="cordova.js"></script>
+        <script type="text/javascript" >
+            
+            document.addEventListener("deviceready", onDeviceReady,true);
+            
+            function onDeviceReady(){
+                
+                document.getElementById("createContact").addEventListener("click",onCreateContact);
+                document.getElementById("deleteContact").addEventListener("click",onDeleteContact);
+                document.getElementById("showContact").addEventListener("click",onDisplayContact);
+                document.getElementById("cameraTakePicture").addEventListener("click", cameraTakePicture);
+                document.getElementById("cameraGetPicture").addEventListener("click", cameraGetPicture);
+                document.getElementById("getPosition").addEventListener("click", getPosition);
+                document.getElementById("watchPosition").addEventListener("click", watchPosition);
+                document.getElementById("getAcceleration").addEventListener("click", getAcceleration);
+                document.getElementById("watchAcceleration").addEventListener("click", watchAcceleration);
+                document.getElementById("createFile").addEventListener("click", createFile);
+                document.getElementById("writeFile").addEventListener("click", saveFile);
+                document.getElementById("readFile").addEventListener("click", readFile);
+                document.getElementById("deleteFile").addEventListener("click", deleteFile);
+                var db = window.openDatabase("DummyDB", "1.0", "Testing", 200000);
+                db.transaction(populateDB, onDBError, onDBSuccess);
+            }
+            
+            function populateDB(tx){
+                tx.executeSql('create table if not exists demo (id integer primary key autoincrement, name text)');           
+            }
+            
+            function insertData(){
+                var db = window.openDatabase("DummyDB", "1.0", "Testing", 200000);
+                db.transaction(insertDB, onDBError, onDBSuccess);
+            }
+            
+            function insertDB(tx){
+                var user_name = document.getElementById("uname").value;
+                
+                tx.executeSql("insert into demo (name) values ('" + user_name + "')");
+            }
+            
+            function viewData(){
+                var db = window.openDatabase("DummyDB", "1.0", "Testing", 200000);
+                db.transaction(loadData, onDBError, onDBSuccess);
+            }
+            
+            function loadData(tx){
+                tx.executeSql('select * from demo', [], onQuerySuccess, onDBError);
+            }
+            
+            function onQuerySuccess(tx, results){
+                var count = results.rows.length;
+                
+                for (var i=0;i<count;i++){
+                    var u_id = results.rows.item(i).id;
+                    var u_name = results.rows.item(i).name;
+                    
+                    var txtArea = document.getElementById('textarea');
+                    txtArea.innerHTML += 'ID: '+ u_id + ' and name: ' + u_name + '<br />';
+                    
+                    alert("ID: " + u_id + ' and name: ' + u_name);
+
+                }
+            }
+            function deleteData(){
+                var db = window.openDatabase("DummyDB", "1.0", "Testing", 200000);
+                db.transaction(deleteRec, onDBError, onDBSuccess)
+            }
+            
+            function deleteRec(tx){
+                var user_nme = document.getElementById("uname").value;
+                
+                tx.executeSql("delete from demo where name = '" + user_nme + "'");
+
+            }
+            
+            function onDBError(error){
+                alert("Error executing the command: " + error.code + "and message: " + error.message);
+            }
+            
+            function onDBSuccess(){
+                alert("Transaction completed successfully");
+            }
+            
+            function createFile(){
+                var type = window.TEMPORARY;
+                var size = 5*1024*1024;
+                window.requestFileSystem(type, size, onSuccess, onError)
+                
+                function onSuccess(fs){
+                    fs.root.getFile('file1.txt', {create: true, exclusive: true}, function(fileEntry) {
+                        alert("File creation successfull!!")}
+                            
+                            , onError);
+                }
+                
+                function onError(error){
+                    alert("Error: " + error.message)
+                }
+            }
+            
+            function saveFile(){
+                var type = window.TEMPORARY;
+                var size = 5*1024*1024;
+                window.requestFileSystem(type, size, onSuccess, errorCallback)
+
+                function onSuccess(fs) {
+                    fs.root.getFile('file2.txt', {create: true}, function(fileEntry) {
+
+                        fileEntry.createWriter(function(fileWriter) {
+                            fileWriter.onwriteend = function(e) {
+                                alert('Write completed...');
+                            };
+
+                            fileWriter.onerror = function(e) {
+                                alert('Write failed: ' + e.toString());
+                            };
+
+                            var blob = new Blob(['This is file data.'], {type: 'text/plain'});
+                            fileWriter.write(blob);
+                        }, errorCallback);
+                    }, errorCallback);
+                }
+
+                function errorCallback(error) {
+                    alert("ERROR: " + error.code)
+                }
+            }
+            
+            function readFile(){
+                var type = window.TEMPORARY;
+                var size = 5*1024*1024;
+                window.requestFileSystem(type, size, onSuccess, errorCallback)
+
+                function onSuccess(fs) {
+                    fs.root.getFile('file2.txt', {}, function(fileEntry) {
+
+                        fileEntry.file(function(file) {
+                            var reader = new FileReader();
+
+                            reader.onloadend = function(e) {
+                                var txtArea = document.getElementById('textarea');
+                                txtArea.value = this.result;
+                            };
+                            reader.readAsText(file);
+                        }, errorCallback);
+                    }, errorCallback);
+                }
+
+                function errorCallback(error) {
+                    alert("ERROR: " + error.code)
+                }
+            }
+            
+            function deleteFile(){
+                var type = window.TEMPORARY;
+                var size = 5*1024*1024;
+                window.requestFileSystem(type, size, onSuccess, errorCallback)
+                
+                function onSuccess(fs){
+                    fs.root.getFile('file2.txt', {create:false}, function(fileEntry){
+                        fileEntry.remove(function(){
+                            alert('File removed !!');
+                        }, errorCallback);
+                    }, errorCallback);
+                }
+                
+                function errorCallback(error) {
+                    alert("ERROR: " + error.code)
+                }
+            }
+            
+            function getAcceleration(){
+                navigator.accelerometer.getCurrentAcceleration(onSuccess, onError);
+                
+                function onSuccess(acceleration){
+                    alert('Acceleration X: ' + acceleration.x + '\n' +
+                         'Acceleration Y: ' + acceleration.y + '\n' +
+                         'Acceleration Z: ' + acceleration.z + '\n' +
+                         'Timestamp: ' + acceleration.timestamp);
+                }
+                
+                function onError(error){
+                    alert('Failed because of: ' + error.message);
+                } 
+            }
+            
+            function watchAcceleration(){
+                var options = {
+                    frequency: 3000
+                }
+                
+                var watchID = navigator.accelerometer.watchAcceleration(onSuccess, onError, options);
+                
+                function onSuccess(acceleration) {
+                    alert('Acceleration X: ' + acceleration.x + '\n' +
+                        'Acceleration Y: ' + acceleration.y + '\n' +
+                        'Acceleration Z: ' + acceleration.z + '\n' +
+                        'Timestamp: '      + acceleration.timestamp + '\n');
+                    
+                    setTimeout(function(){
+                    navigator.accelerometer.clearWatch(watchID);
+                }, 10000);
+                };
+                
+                function onError() {
+                    alert('Failed because of: ' + error.message);
+                };
+                
+            }
+            
+            
+            function watchPosition(){
+                var options = {
+                    enableHighAccuracy: true,
+                    maximumAge: 3600000,
+                    timeout: 5000
+                }
+                
+                var watchID = navigator.geolocation.getCurrentPosition(onSuccess, onError, options);
+                
+                function onSuccess(position){
+                    alert('Latitude : ' + position.coords.latitude + '\n' +
+                         'Longitude : ' + position.coords.longitude + '\n' +
+                         'Altitude : ' + position.coords.altitude );
+                }
+                function onError(error){
+                    alert('Failed because of: ' + error.message)
+                } 
+            }
+            
+            function getPosition(){
+                var options = {
+                    enableHighAccuracy: true,
+                    maximumAge: 3600000
+                }
+                
+                var watchID = navigator.geolocation.getCurrentPosition(onSuccess, onError, options);
+                
+                function onSuccess(position){
+                    alert('Latitude : ' + position.coords.latitude + '\n' +
+                         'Longitude : ' + position.coords.longitude + '\n' +
+                         'Altitude : ' + position.coords.altitude );
+                }
+                function onError(error){
+                    alert('Failed because of: ' + error.message)
+                } 
+            }
+            
+            function cameraGetPicture() {
+                navigator.camera.getPicture(onSuccess, 
+                                            onFail, { 
+                                            quality: 50, 
+                                            destinationType: Camera.DestinationType.FILE_URI,
+                                            sourceType: Camera.PictureSourceType.PHOTOLIBRARY});
+                function onSuccess(imageURI){
+                    var img = document.getElementById('showImage');
+                    img.src = imageURI;
+                }
+                function onFail(message){
+                    alert('Failed because of: ' + message)
+                } 
+                
+            }
+            
+            function cameraTakePicture(){
+                navigator.camera.getPicture(
+                    onSuccess, 
+                    onFail, {
+                        quality: 50, 
+                        destinationType: Camera.DestinationType.DATA_URL 
+                    });  
+   
+                    function onSuccess(imageData) { 
+                        var image = document.getElementById('displayImage'); 
+                        image.src = "data:image/jpeg;base64," + imageData; 
+                    }  
+   
+                function onFail(message) { 
+                    alert('Failed because: ' + message); 
+                }
+                
+            }
+            
+            function onCreateContact(){
+                var phoneNumbers = [];
+                phoneNumbers.push(new ContactField("work", "212-555-1234", false));
+                phoneNumbers.push(new ContactField("mobile", "917-555-5432", true));
+                
+                var myContact = navigator.contacts.create(
+                    {"displayName": "Test User"}
+                );
+                myContact.phoneNumbers = phoneNumbers;
+                
+                myContact.save(contactSuccess, contactError);
+                
+                function contactSuccess(){
+                    alert("contact is saved!");
+                }
+                
+                function contactError(message){
+                    alert("contact is not saved and failed because of this : " + message);
+                }
+            }
+            
+            function onDeleteContact(){
+                var options = new ContactFindOptions();
+                options.filter = "Test User";
+                options.multiple = false;
+                fields = ["displayName"];
+                
+                navigator.contacts.find(fields, onContactFindSuccess, onContactFindError, options);
+                
+                function onContactFindSuccess(contacts){
+                    var contact = contacts[0]; 
+                    contact.remove(onRemoveSuccess, onRemoveError);
+                    
+                    function onRemoveSuccess(contact){
+                        alert("contact Deleted");
+                    }
+                    function onRemoveError(message){
+                        alert("Failed because "+ message);
+                    }
+                }
+                function onContactFindError(message){
+                    alert("Failed because "+ message);
+                }
+            }
+            
+            function onDisplayContact(){
+                var options = new ContactFindOptions();
+                options.filter = "";
+                options.multiple = true;
+                fields = ["displayName"];
+                
+                navigator.contacts.find(fields, onContactFindSuccess, onContactFindError, options);
+                
+                function onContactFindSuccess(contacts){
+                    var element = document.getElementById('displayData');
+                    for(var i=0; i < contacts.length; i++){
+                        element.innerHTML += 'Display Name: ' + contacts[i].displayName + '<br />';
+
+                    }
+                }
+                function onContactFindError(message){
+                    alert("Failed because "+ message);
+                }
+            }
+        </script>
+
+        <div class = "app">
+            <button id = "createContact">ADD Contact</button>
+            <button id = "deleteContact">Delete Contact</button>
+            <button id = "showContact">Show Contact</button>
+            <div id='displayData'> <br /></div>
+            <button id = "cameraTakePicture">TAKE PICTURE</button>
+            <button id = "cameraGetPicture">GET PICTURE</button>
+            <img id="displayImage" height="20" width="40" />
+            <img id="showImage" height="20" width="40" />
+            <button id="getPosition">Current Position</button>
+            <button id="watchPosition">Watch Position</button>
+            <button id="getAcceleration"> Get current Acceleration</button> <br />
+            <button id="watchAcceleration">Watch Acceleration</button> <br />
+            <button id="createFile">Create File</button><br />
+            <button id="writeFile">Write to File</button><br />
+            <button id="readFile">Read from file</button><br />
+            <button id="deleteFile">Remove File</button><br />
+            <textarea id="textarea"></textarea><br />
+            <input type="text" id="uname" placeholder="Please enter name" /> <br />
+            <input type="num" id="uid" placeholder="Please provide id of user to delete" /><br />
+            <button onClick="insertData()"> Insert</button>
+            <button onClick="viewData()"> View</button>
+            <button onClick="deleteData()"> Delete</button><br />
+            
+        </div>
+    </body>
+</html>
